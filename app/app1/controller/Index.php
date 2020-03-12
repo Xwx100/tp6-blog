@@ -10,9 +10,9 @@ class Index extends BaseController
 {
     public function index()
     {
-        Log::write(1111111);
-        session('test0', 1111);
-        var_dump($this->request->session());
+        Log::write('test');
+//        session('test0', 1111);
+//        var_dump($this->request->session());
 //        TestFacade::haha();
 //        print_r(Container::getInstance()->get(TestFacadeInstance::class));
         return json(['app1' => 1]);

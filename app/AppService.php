@@ -14,7 +14,7 @@ class AppService extends Service
     public function register()
     {
         // 服务注册
-        $this->app->bind(implode('_', [NAME_PRE, 'redirect']), Redirect::class);
+        $this->app->bind(add_name_pre('redirect'), Redirect::class);
     }
 
     public function boot()

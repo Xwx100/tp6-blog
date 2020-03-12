@@ -35,7 +35,7 @@ return [
             // 关闭通道日志写入
             'close'          => false,
             // 日志输出格式化
-            'format'         => '[%s][%s] %s',
+            'format'         => '[' . APP_UUID . '][%s][%s] %s',
             // 是否实时写入
             'realtime_write' => false,
         ],

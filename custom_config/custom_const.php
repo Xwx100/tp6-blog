@@ -1,7 +1,9 @@
 <?php
+define('ALL_PRE_NAME', 'xu');
+
 if (!function_exists('add_name_pre')) {
     function add_name_pre(string $name) {
-        return implode('_', ['xu', $name]);
+        return implode('_', [ALL_PRE_NAME, $name]);
     }
 }
 if (!function_exists('add_re_format')) {

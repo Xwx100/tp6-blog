@@ -20,6 +20,8 @@ class Log implements Middle {
     public function handle(Request $request, \Closure $next) {
         // TODO: Implement handle() method.
         \think\facade\Log::params($request->param());
+//        var_dump($request->getInput());
+//        exit();
         return $next($request);
     }
 

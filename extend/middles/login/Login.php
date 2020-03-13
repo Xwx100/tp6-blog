@@ -27,7 +27,7 @@ class Login implements Middle {
             if (false === stripos($request->url(), 'admin/index/login')) {
                 $this->getRedirect()->start($request);
             } else {
-
+                $params = $request->param();
             }
         }
 

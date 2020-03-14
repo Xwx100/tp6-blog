@@ -6,9 +6,13 @@
  * Time: 11:40
  */
 
-namespace tools;
+namespace services;
 
 
-trait Tool {
+use services\tool\DataBase;
+use services\tool\FieldAttr;
+use services\tool\Lists;
+
+class MysqlUtils {
     use DataBase,FieldAttr,Lists;
 }

@@ -6,10 +6,33 @@
  * Time: 11:41
  */
 
-namespace tools;
+namespace services\tool;
 
+
+use think\Model;
 
 trait FieldAttr {
+
+
+    /**
+     * 增加 属性
+     *
+     * @param Model $m
+     *
+     * @return array
+     */
+    public function descToAttr(Model $m): array {
+        $data = $m->query("desc {$m->getTable()}");
+        var_dump($m);
+        $data = array_map(function ($row) {
+            foreach (['Key', 'Default', 'Extra'] as $k) {
+                unset($row[$k]);
+            }
+        }, $data);
+
+        return $data;
+    }
+
 
     /**
      * 增加属性
@@ -129,7 +152,7 @@ trait FieldAttr {
     /**
      * 获取 属于where_format条件格式化 keys
      *
-     * @param array  $fieldAttr
+     * @param array $fieldAttr
      *
      * @return array
      */
@@ -140,7 +163,7 @@ trait FieldAttr {
     /**
      * 获取 属于timed_null的 keys
      *
-     * @param array  $fieldAttr
+     * @param array $fieldAttr
      *
      * @return array
      */

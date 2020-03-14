@@ -6,7 +6,7 @@
  * Time: 11:42
  */
 
-namespace tools;
+namespace services\tool;
 
 
 trait DataBase {

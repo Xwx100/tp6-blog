@@ -6,7 +6,7 @@
  * Time: 15:34
  */
 
-namespace tools;
+namespace services\tool;
 
 
 trait Out {

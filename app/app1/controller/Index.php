@@ -15,7 +15,7 @@ class Index extends BaseController
 //        var_dump($this->request->session());
 //        TestFacade::haha();
 //        print_r(Container::getInstance()->get(TestFacadeInstance::class));
-        return json(['app1' => 1]);
+        return json(['app1' => 2]);
     }
 
     public function hello($name = 'ThinkPHP6')

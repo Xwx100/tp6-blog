@@ -13,6 +13,14 @@ use services\tool\DataBase;
 use services\tool\FieldAttr;
 use services\tool\Lists;
 
+/**
+ * mysql 通用工具包
+ *
+ * Class MysqlUtils
+ *
+ * @mixin FieldAttr
+ * @package services
+ */
 class MysqlUtils {
     use DataBase,FieldAttr,Lists;
 }

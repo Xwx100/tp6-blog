@@ -9,30 +9,39 @@
 namespace services\tool;
 
 
+use think\facade\App;
 use think\Model;
 
 trait FieldAttr {
 
+    protected static $info = [
+        'field_attr_path' => EXTEND_FIELD_ATTR_PATH
+    ];
+
 
     /**
-     * 增加 属性
+     * 生成 表 fieldAttr 基础属性
      *
      * @param Model $m
      *
-     * @return array
+     * @return bool
      */
-    public function descToAttr(Model $m): array {
+    public static function descToAttr(Model $m): bool {
         $data = $m->query("desc {$m->getTable()}");
-        var_dump($m);
         $data = array_map(function ($row) {
-            foreach (['Key', 'Default', 'Extra'] as $k) {
+            $row['before_field'] = $row['Field'];
+            foreach (['Field', 'Key', 'Default', 'Extra'] as $k) {
                 unset($row[$k]);
             }
+            return array_change_key_case($row, CASE_LOWER);
         }, $data);
-
-        return $data;
+        $fieldAttr = array_combine(array_column($data, 'field'), array_values($data));
+        $path = self::$info['field_attr_path'] ?? implode('/', [App::getRootPath(), 'extend', 'table_field_attr']);
+        if (false === is_dir($path)) {
+            mkdir($path);
+        }
+        return file_put_contents($path . DIRECTORY_SEPARATOR . $m->getTable() . '.txt', var_export($fieldAttr, true));
     }
-
 
     /**
      * 增加属性
@@ -51,7 +60,7 @@ trait FieldAttr {
     }
 
     /**
-     * field => 手写（处理后字段） _field => 数据库原始名（处理前字段） fieldAttr.key => 重命名
+     * after_field => 手写（处理后字段） before_field => 数据库原始名（处理前字段） fieldAttr.key => 重命名
      *
      * @param array $fieldAttr
      *
@@ -64,16 +73,18 @@ trait FieldAttr {
             if ($prop['alias']) {
                 $alias = "{$prop['alias']}.";
             }
+            // 优先读取 格式化字段
             if ($prop['format']) {
-                $tmp = $prop['_field'] ?? $k;
-                $prop['field'] = str_replace([":key"], ["{$alias}{$tmp}"], $prop['format']) . " as {$k}";
+                $tmp = $prop['before_field'] ?? $k;
+                $prop['after_field'] = sprintf("{$prop['format']} as {$k}", "{$alias}{$tmp}");
                 continue;
             }
-            if ($prop['_field'] && $prop['_field'] !== $k) {
-                $prop['field'] = "{$alias}{$prop['_field']} as {$k}";
+            // front_field !== before_field 则触发重命名 as
+            if ($prop['before_field'] && $prop['before_field'] !== $k) {
+                $prop['after_field'] = "{$alias}{$prop['before_field']} as {$k}";
                 continue;
             }
-            $prop['field'] = "{$alias}{$k}";
+            $prop['after_field'] = "{$alias}{$k}";
         }
 
         return $fieldAttr;
@@ -84,69 +95,144 @@ trait FieldAttr {
      *
      * @param array $params
      * @param array $fieldAttr
-     * @param array $where
+     *
+     * @return array
      */
-    public static function handleWhere(array $params, array $fieldAttr, array &$where) {
-        if (!$params) {
-            return;
+    public static function handleWhere(array $params, array $fieldAttr): array {
+        if (empty($params)) {
+            return $fieldAttr;
         }
-        $params = Util::trimArray($params);
-        foreach ($params as $key => $value) {
-            $continueCond = !$fieldAttr[$key];
-            // _no_default 不忽略 空数组 []
-            $_default = $params['_no_default'] ? (!$value && !is_array($value)) : !$value;
-            $_default = $_default && !in_array($value, [0, '0'], true);
-            $continueCond = $continueCond || $_default;
-            if ($continueCond) continue;
-            $prop = $fieldAttr[$key];
-            $field = self::getOriginField($fieldAttr, $key);
-            if (is_array($value)) {
-                if ($fieldAttr[$key]['multi']) {
-                    $value = array_unique($value);
-                    $where[$field] = ['in', $value];
-                } elseif ($fieldAttr[$key]['range']) {
-                    if ($value[0] === 'between') {
-                        if (!$value[1] || !$value[2]) {
-                            continue;
-                        }
-                        if ($prop['where_format']) {
-                            $_ = str_replace(':key', $field, $prop['where_format']) . " between '{$value[1]}' and '{$value[2]}'";
-                            $where[$field] = $_;
-                            continue;
-                        }
-                        $where[$field] = [$value[0], [$value[1], $value[2]]];
-                    } else {
-                        if (!$value[1]) {
-                            continue;
-                        }
-                        if ($prop['where_format']) {
-                            $_ = str_replace(':key', $field, $prop['where_format']) . " = '{$value[1]}'";
-                            $where[$field] = $_;
-                            continue;
-                        }
-                        $where[$field] = [$value[0], $value[1]];
-                    }
-                }
-                continue;
+        array_walk($params, function ($frontValue, $k) use (&$fieldAttr, $params, &$where) {
+            // 没有配置 属性 不展示
+            if (!isset($fieldAttr[$k])) {
+                return;
             }
-            if ($fieldAttr[$key]['moHu']) {
-                $where[$field] = ['like', "%{$value}%"];
-            } else {
-                $where[$field] = ['=', $value];
+            // 过滤 空字符串
+            if ($params['ctl_no_empty'] && empty($value)) {
+                return;
             }
-        }
+            // 获取 字段 属性
+            $prop = &$fieldAttr[$k];
+            $afterField = self::getOriginField($fieldAttr, $k);
+            self::handleProp($frontValue, $afterField, $prop);
+        }, ARRAY_FILTER_USE_BOTH);
+
+        return $fieldAttr;
     }
 
 
     /**
-     * 原生_field 处理后的 field
+     * 处理 排序 字段
      *
+     * @param array $params
      * @param array $fieldAttr
      *
      * @return array
      */
-    public static function getField(array $fieldAttr): array {
-        return array_column($fieldAttr, 'field');
+    public static function handleOrderBy(array $params, array $fieldAttr): array {
+        $order = [];
+        foreach ((array)$params['order_by'] as $item) {
+            $p = $fieldAttr[$item['sort_field']];
+            $v = ($p ? $p['after_field'] : $item['sort_field']) . " {$item['sort_type']}";
+            $v && ($order[] = $v);
+        }
+        return $order;
+    }
+
+    /**
+     * 处理属性（multi | like | range）
+     *
+     * @param        $frontValue
+     * @param        $afterField
+     * @param array  $prop
+     */
+    public static function handleProp($frontValue, $afterField, array &$prop) {
+        if (is_array($frontValue)) {
+            if ($prop['multi']) {
+                $frontValue = array_unique($frontValue);
+                $prop['after_where'] = [$afterField, 'in', $frontValue];
+//                $where[$afterField] = ['in', $frontValue];
+            } elseif ($prop['range']) {
+                if ($frontValue[0] === 'between') {
+                    if (!$frontValue[1] || !$frontValue[2]) {
+                        return;
+                    }
+                    if ($prop['where_format']) {
+                        $_ = sprintf($prop['where_format'], $afterField) . " between '{$frontValue[1]}' and '{$frontValue[2]}'";
+                        $prop['after_where'] = $_;
+//                        $where[$afterField] = $_;
+                        return;
+                    }
+                    $prop['after_where'] = [$afterField, $frontValue[0], [$frontValue[1], $frontValue[2]]];
+//                    $where[$afterField] = [$frontValue[0], [$frontValue[1], $frontValue[2]]];
+                } else {
+                    if (!$frontValue[1]) {
+                        return;
+                    }
+                    if ($prop['where_format']) {
+                        $_ = sprintf($prop['where_format'], $afterField) . " = '{$frontValue[1]}'";
+                        $prop['after_where'] = $_;
+//                        $where[$afterField] = $_;
+                        return;
+                    }
+                    $prop['after_where'] = [$afterField, $frontValue[0], $frontValue[1]];
+//                    $where[$afterField] = [$frontValue[0], $frontValue[1]];
+                }
+            }
+            return;
+        }
+        if ($prop['like']) {
+            $prop['after_where'] = [$afterField, 'like', "%{$frontValue}%"];
+//            $where[$afterField] = ['like', "%{$frontValue}%"];
+        } else {
+            $prop['after_where'] = [$afterField, '=', $frontValue];
+//            $where[$afterField] = ['=', $frontValue];
+        }
+    }
+
+    /**
+     * 原生before_field 处理后的 after_field
+     *
+     * @param array $params
+     * @param array $fieldAttr
+     *
+     * @return array
+     */
+    public static function getField(array $params, array $fieldAttr): array {
+        $all = $fieldAttr;
+        if (isset($params['field'])) {
+            $all = array_intersect_key($all, array_combine($params['field'], $params['field']));
+        }
+        return self::getColumn($all, 'after_field');
+    }
+
+    /**
+     * @param $fieldAttr
+     *
+     * @return array
+     */
+    public static function getWhere($fieldAttr) {
+        return self::getColumn($fieldAttr, 'after_where');
+    }
+
+    /**
+     * @param $params
+     * @param $fieldAttr
+     *
+     * @return array
+     */
+    public static function getGroup($params, $fieldAttr) {
+        if (!isset($params['group_by'])) {
+            return [];
+        }
+        $params['group_by'] = array_map(function ($v) use ($fieldAttr) {
+            return $fieldAttr[$v] ?: [];
+        }, $params['group_by']);
+        return self::getColumn($params['group_by'], 'after_field');
+    }
+
+    public static function getColumn(array $fieldAttr, $name) {
+        return array_column($fieldAttr, $name);
     }
 
     /**
@@ -186,20 +272,14 @@ trait FieldAttr {
             if (!isset($prop[$propKey])) {
                 continue;
             }
-            $v = null;
-            if ($handle) {
-                $v = self::getOriginField($fieldAttr, $key);
-            } else {
-                $v = $key;
-            }
-            $k[] = $v;
+            $k[] = $handle ? self::getOriginField($fieldAttr, $key) : $key;
         }
 
         return $k;
     }
 
     /**
-     * 获取带有alias处理前的原始字段   1.fieldAttr.key._field   2.fieldAttr.key
+     * 获取带有alias处理前的原始字段   1.fieldAttr.key.before_field   2.fieldAttr.key
      *
      * @param array  $fieldAttr
      * @param string $key
@@ -208,7 +288,7 @@ trait FieldAttr {
      */
     public static function getOriginField(array $fieldAttr, string $key) {
         $prop = $fieldAttr[$key];
-        $field = $prop['_field'] ?? $key;
+        $field = $prop['before_field'] ?? $key;
         if ($prop['alias']) {
             $field = "{$prop['alias']}.{$field}";
         }

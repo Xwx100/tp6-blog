@@ -9,6 +9,13 @@ use think\facade\Config;
 use think\Request;
 use think\Response;
 
+/**
+ * 日志 增加uuid字段 用于标明一个请求
+ *
+ * Class Log
+ *
+ * @package middles\login
+ */
 class Log implements Middle {
 
     /**
@@ -18,10 +25,11 @@ class Log implements Middle {
      * @return mixed
      */
     public function handle(Request $request, \Closure $next) {
-        // TODO: Implement handle() method.
-        \think\facade\Log::params($request->param());
-//        var_dump($request->getInput());
-//        exit();
+        // 屏蔽 警告
+        error_reporting(E_ALL ^ E_NOTICE);
+
+        $params = $request->param();
+        \think\facade\Log::params(array_merge($params, ['session' => $request->session()], ['method' => $request->method()]));
         return $next($request);
     }
 

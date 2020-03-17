@@ -8,6 +8,7 @@
 
 namespace services\tool;
 
+use think\Model;
 
 trait DataBase {
 
@@ -68,7 +69,6 @@ trait DataBase {
             return $data;
         } catch (\Exception $e) {
             $m->rollback();
-            lof($e->getMessage() . $e->getTraceAsString());
             throw new \Exception($e->getMessage());
         }
     }

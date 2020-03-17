@@ -70,15 +70,25 @@ trait Lists {
     /**
      * 格式化 数据类型
      *
-     * @param  array $v
+     * @param array  $v
      * @param string $funcName
+     *
+     * @param null   $only
      *
      * @return array
      */
-    public static function formatType(array $v, $funcName = 'intval') {
-        return array_map(function ($vv) use ($funcName) {
-            return call_user_func($funcName, $vv);
-        }, $v);
+    public static function formatType(array $v, $funcName = 'intval', $only = null) {
+        array_walk($v, function (&$vv, $kk) use ($funcName, $only) {
+            if (!isset($only) || (isset($only) && in_array($kk, $only))) {
+                if ($funcName === 'array') {
+                    $vv = (array)$vv;
+                } else {
+                    $vv = call_user_func($funcName, $vv);
+                }
+            }
+        }, ARRAY_FILTER_USE_BOTH);
+
+        return $v;
     }
 
 }

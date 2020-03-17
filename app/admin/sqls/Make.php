@@ -88,6 +88,22 @@ create table if not exists `%s` (
     `is_deleted` tinyint NOT NULL DEFAULT 0,
     primary key (`order_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8 COMMENT='角色排序表';",
+        // 记录 某用户 local_ip ua to_ip
+        'log' => "
+create table if not exists `%s` (
+    `log_id` bigint unsigned NOT NULL AUTO_INCREMENT,
+    `user_id` bigint unsigned NOT NULL,
+    `user_name_en` varchar(50) NOT NULL,
+    `url_path` varchar(50) NOT NULL COMMENT '路由地址',
+    `req_id` varchar(40) not null default '' comment '请求唯一ID',
+    `req_params` text NOT NULL COMMENT '请求内容',
+    `res_params` text not null comment '响应内容',
+    `remote_addr` varchar(20) not null default '0.0.0.0' comment '客户端ip',
+    `ua` varchar(100) not null default '',
+    `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    primary key (`log_id`),
+    key (`url_path`, `operate_key`)
+) ENGINE=INNODB DEFAULT CHARSET=utf8 COMMENT='日志';"
     ];
 
     /**

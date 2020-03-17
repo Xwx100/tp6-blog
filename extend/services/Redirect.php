@@ -25,7 +25,7 @@ class Redirect {
         if (!$this->isJson($request)) {
             redirect(APP_LOGIN_URL, 303)->send();
         } else {
-            json(add_re_format(['url' => APP_LOGIN_URL], '重定向url', 0))->send();
+            json(xu_add_re_format(['url' => APP_LOGIN_URL], '重定向url', 0))->send();
         }
     }
 

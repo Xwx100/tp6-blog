@@ -4,6 +4,7 @@
 namespace services;
 
 
+use http\Url;
 use think\facade\Db;
 use think\facade\Log;
 
@@ -203,12 +204,14 @@ class Admin {
      * Admin constructor.
      *
      * @param array           $params     ['join' => [['no_pre_name' => '','type' => 'left']], 'order_by' => [['sort_field' => '', 'sort_type']], 'group_by' => []]]
+     * @param string          $name
      * @param callable|null   $addNamePre 数据库 表 前缀
      * @param MysqlUtils|null $utils      数据库 通用 工具包
      */
-    public function __construct(array $params, callable $addNamePre = null, MysqlUtils $utils = null) {
-        $this->initFunc($addNamePre, $utils);
-        $this->initParams($params);
+    public function __construct(array $params, string $name = null, callable $addNamePre = null, MysqlUtils $utils = null) {
+        $this->initFunc($addNamePre, $utils)
+            ->initBase($name ?? 'user')
+            ->initParams($params);
     }
 
     /**
@@ -216,11 +219,13 @@ class Admin {
      *
      * @param callable|null   $addNamePre
      * @param MysqlUtils|null $utils
+     *
+     * @return Admin
      */
     public function initFunc(callable $addNamePre = null, MysqlUtils $utils = null) {
         // 设置 mysql 工具通用包
         if (!isset($utils)) {
-            $this->utils = get_service('mysql_utils');
+            $this->utils = xu_get_service('mysql_utils');
         } else {
             $this->utils = $utils;
         }
@@ -232,12 +237,16 @@ class Admin {
         } else {
             $this->addNamePre = $addNamePre;
         }
+
+        return $this;
     }
 
     /**
      * 初始化 参数
      *
      * @param array $params
+     *
+     * @return Admin
      */
     public function initParams(array $params) {
         // join | order_by | group_by => array
@@ -245,11 +254,6 @@ class Admin {
 
         // 设置参数
         $this->params = $params;
-        // 设置基础模型表
-        $this->base = Db::name('user')->alias($this->registers['user']['alias']);
-        // 设置基础属性
-        $this->fieldAttr = $this->utils->addProp($this->registers['user']['field_attr'], ['alias' => $this->registers['user']['alias']]);
-
 
         // 设置 join 和 所有属性表
         $this->handleJoin();
@@ -257,6 +261,22 @@ class Admin {
         // 生成 处理后 after_field
         $this->fieldAttr = $this->utils->handleField($this->fieldAttr);
         $this->fieldAttr = $this->utils->handleWhere($this->params, $this->fieldAttr);
+
+        return $this;
+    }
+
+    /**
+     * @param string $name
+     *
+     * @return $this
+     */
+    public function initBase(string $name) {
+        // 设置基础模型表
+        $this->base = Db::name($name)->alias($this->registers[$name]['alias']);
+        // 设置基础属性
+        $this->fieldAttr = $this->utils->addProp($this->registers[$name]['field_attr'], ['alias' => $this->registers[$name]['alias']]);
+
+        return $this;
     }
 
     public function lists() {
@@ -270,6 +290,32 @@ class Admin {
         Log::sql($this->base->getLastSql());
 
         return $data;
+    }
+
+    /**
+     * @param array $params
+     *
+     * @return int|string
+     */
+    public function addLog(array $params) {
+        if (empty($params['user_id'])) {
+            $params = array_merge($params, app()->session->get(SESSION_USER_INFO));
+        }
+        if (empty($params['req_params'])) {
+            $params['req_params'] = app()->request->param();
+        }
+        if (empty($params['res_params'])) {
+            $params['res_params'] = response()->getData();
+        }
+        if (empty($params['remote_addr'])) {
+            $params['remote_addr'] = app()->request->ip();
+        }
+        if (empty($params['ua'])) {
+            $params['ua'] = app()->request->header('user_agent');
+        }
+        $this->utils->changeType($params, ['req_params', 'res_params'], 'array2Json');
+
+        return $this->initBase('log')->base->strict(false)->json(['req_params', 'res_params'])->insertGetId($params);
     }
 
     public function addNamePre($name) {

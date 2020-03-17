@@ -6,6 +6,7 @@ namespace middles\login;
 
 use middles\interfaces\Middle;
 use think\facade\Config;
+use think\facade\Env;
 use think\Request;
 use think\Response;
 
@@ -25,7 +26,7 @@ class Log implements Middle {
      * @return mixed
      */
     public function handle(Request $request, \Closure $next) {
-        // 屏蔽 警告
+        // 忽略 警告
         error_reporting(E_ALL ^ E_NOTICE);
 
         $params = $request->param();

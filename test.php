@@ -21,8 +21,9 @@ $a = new A;
 $b = new B;
 $c = new C;
 
-array_push(A::$cc, 11);
+//array_push(A::$cc, 11);
+//
+//var_dump(A::$cc);
+//$CC = 'A';
+//var_dump($CC::$cc);
 
-var_dump(A::$cc);
-$CC = 'A';
-var_dump($CC::$cc);

@@ -16,9 +16,9 @@ class AppService extends Service
     public function register()
     {
         // 服务注册
-        $this->app->bind(add_name_pre('redirect'), Redirect::class);
-        $this->app->bind(add_name_pre('mysql_utils'), MysqlUtils::class);
-        $this->app->bind(add_name_pre('admin'), Admin::class);
+        $this->app->bind(xu_add_name_pre('redirect'), Redirect::class);
+        $this->app->bind(xu_add_name_pre('mysql_utils'), MysqlUtils::class);
+        $this->app->bind(xu_add_name_pre('admin'), Admin::class);
     }
 
     public function boot()

@@ -5,14 +5,15 @@ namespace app\admin\controller;
 
 
 use app\BaseController;
-use think\facade\Db;
-use app\admin\model\User;
+use think\facade\Session;
 
 class index extends BaseController {
 
-    public function login() {
-//        (new User)->login([]);
+    public function index() {
 
-//        return json($data);
+    }
+
+    public function login() {
+
     }
 }

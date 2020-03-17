@@ -8,34 +8,11 @@
 
 namespace services\tool;
 
+use think\Db;
+use think\db\Query;
 use think\Model;
 
 trait DataBase {
-
-
-    /**
-     * 处理 增 改 通用参数 例如 adduser、edituser
-     *
-     * @param array $params
-     *
-     * @param       $key
-     *
-     * @return mixed
-     */
-    public static function addCommon(array $params, $key = 'id') {
-        return self::judgeAddOrUp($params, function ($params) {
-            $params['adduser'] = Util::currUser();
-            $params['edituser'] = Util::currUser();
-            return $params;
-        }, function ($params) {
-            $params['edituser'] = Util::currUser();
-            // no update
-            foreach (['adduser', 'addtime'] as $k) {
-                unset($params[$k]);
-            }
-            return $params;
-        }, $key);
-    }
 
     /**
      * 判断 增 或 改
@@ -55,21 +32,23 @@ trait DataBase {
     }
 
     /**
-     * @param Model         $m
-     * @param callable|null $func
+     * @param Query    $query
+     * @param array    $params
+     * @param callable $func
      *
      * @return mixed
-     * @throws \think\exception\PDOException
+     * @throws \Exception
      */
-    public static function beginFunc(Model $m, callable $func) {
+    public static function beginFunc(Query $query, array $params, callable $func) {
         try {
-            $m->startTrans();
-            $data = call_user_func($func, $m);
-            $m->commit();
+            $query->startTrans();
+            $data = call_user_func($func, $query, $params);
             return $data;
         } catch (\Exception $e) {
-            $m->rollback();
+            $query->rollback();
             throw new \Exception($e->getMessage());
+        } finally {
+            $query->commit();
         }
     }
 }

@@ -11,6 +11,7 @@ namespace middles\login;
 use middles\interfaces\Middle;
 use think\facade\App;
 use think\facade\Session;
+use think\facade\View;
 use think\Request;
 use think\Response;
 
@@ -36,12 +37,12 @@ class Login implements Middle {
 
         $userInfo = \app()->session->get(SESSION_USER_INFO);
         if (!isset($userInfo)) {
-            // session 无用户信息 跳转
             if (false === stripos($request->url(), APP_LOGIN_URL)) {
                 xu_get_service('redirect')->start($request);
             } else  {
+                // static nginx代理
                 if ($request->isGet()) {
-//                    return view('');
+                    xu_get_service('redirect')->start($request, FRONT_LOGIN_URL);
                 }
                 $keys = ['user_name_en', 'password'];
                 $params = \request()->param($keys);

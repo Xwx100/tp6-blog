@@ -21,11 +21,15 @@ use think\Request;
 
 class Redirect {
 
-    public function start(Request $request) {
+    /**
+     * @param Request     $request
+     * @param string|null $url
+     */
+    public function start(Request $request, string $url = null) {
         if (!$this->isJson($request)) {
-            redirect(APP_LOGIN_URL, 303)->send();
+            redirect($url ?? APP_LOGIN_URL, 303)->send();
         } else {
-            json(xu_add_re_format(['url' => APP_LOGIN_URL], '重定向url', 0))->send();
+            json(xu_add_re_format(['url' => $url ?? APP_LOGIN_URL], '重定向url', 0))->send();
         }
     }
 

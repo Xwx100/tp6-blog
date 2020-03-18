@@ -22,8 +22,6 @@ axios.interceptors.request.use(
   config => {
     // 加载
     startLoading();
-    if (localStorage.eleToken)
-      config.headers.Authorization = localStorage.eleToken;
     return config;
   },
   error => {
@@ -35,19 +33,23 @@ axios.interceptors.request.use(
 axios.interceptors.response.use(
   response => {
     endLoading();
+    let msg = response.data.msg;
+    if (response.data.code === 0) {
+      Message.success(msg)
+    } else {
+      Message.error(msg)
+      return Promise.reject(msg)
+    }
     return response;
   },
   error => {
-    // 错误提醒
+    // http_code 错误
     endLoading();
     Message.error(error.response.data);
 
     const { status } = error.response;
     if (status == 401) {
       Message.error("token值无效，请重新登录");
-      // 清除token
-      localStorage.removeItem("eleToken");
-
       // 页面跳转
       router.push("/login");
     }

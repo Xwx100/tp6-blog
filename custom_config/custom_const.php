@@ -40,6 +40,7 @@ define('SESSION_STORE_TYPE', 'redis');
 define('SESSION_USER_INFO', xu_add_name_pre('user_info'));
 
 define('APP_LOGIN_URL', '/admin/index/login');
+define('FRONT_LOGIN_URL', '/index.html');
 define('APP_UUID', xu_add_app_uuid());
 
 if (PHP_SAPI === 'cli') {

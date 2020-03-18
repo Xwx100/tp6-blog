@@ -30,7 +30,7 @@ class Log implements Middle {
         error_reporting(E_ALL ^ E_NOTICE);
 
         $params = $request->param();
-        \think\facade\Log::params(array_merge($params, ['session' => $request->session()], ['method' => $request->method()]));
+        \think\facade\Log::params(array_merge($params, ['method' => $request->method()]));
         return $next($request);
     }
 

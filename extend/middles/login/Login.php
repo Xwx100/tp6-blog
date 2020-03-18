@@ -30,7 +30,7 @@ class Login implements Middle {
      * @return mixed
      */
     public function handle(Request $request, \Closure $next) {
-        if (PHP_SAPI === 'cli') {
+        if ($request->isCli()) {
             return $next($request);
         }
 

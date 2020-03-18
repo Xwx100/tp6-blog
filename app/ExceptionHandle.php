@@ -36,6 +36,12 @@ class ExceptionHandle extends Handle
      */
     public function report(Throwable $exception): void
     {
+        // 支持 cli 命令行
+        if (PHP_SAPI === 'cli') {
+            var_dump($exception->getMessage());
+            var_dump($exception->getTraceAsString());
+            exit();
+        }
         // 使用内置的方式记录异常日志
         parent::report($exception);
     }

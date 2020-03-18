@@ -5,7 +5,6 @@ namespace app\admin\controller;
 
 
 use app\BaseController;
-use think\facade\Session;
 
 class index extends BaseController {
 
@@ -14,6 +13,5 @@ class index extends BaseController {
     }
 
     public function login() {
-
     }
 }

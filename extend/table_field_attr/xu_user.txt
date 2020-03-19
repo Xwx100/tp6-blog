@@ -1,0 +1,56 @@
+array (
+  'user_id' => 
+  array (
+    'type' => 'bigint(20) unsigned',
+    'null' => 'NO',
+    'before_field' => 'user_id',
+  ),
+  'user_name_en' => 
+  array (
+    'type' => 'varchar(50)',
+    'null' => 'NO',
+    'before_field' => 'user_name_en',
+  ),
+  'user_name_zh' => 
+  array (
+    'type' => 'varchar(50)',
+    'null' => 'NO',
+    'before_field' => 'user_name_zh',
+  ),
+  'password' => 
+  array (
+    'type' => 'varchar(255)',
+    'null' => 'NO',
+    'before_field' => 'password',
+  ),
+  'email' => 
+  array (
+    'type' => 'varchar(255)',
+    'null' => 'YES',
+    'before_field' => 'email',
+  ),
+  'phone' => 
+  array (
+    'type' => 'varchar(255)',
+    'null' => 'NO',
+    'before_field' => 'phone',
+  ),
+  'create_at' => 
+  array (
+    'type' => 'timestamp',
+    'null' => 'NO',
+    'before_field' => 'create_at',
+  ),
+  'update_at' => 
+  array (
+    'type' => 'timestamp',
+    'null' => 'NO',
+    'before_field' => 'update_at',
+  ),
+  'is_deleted' => 
+  array (
+    'type' => 'tinyint(4)',
+    'null' => 'NO',
+    'before_field' => 'is_deleted',
+  ),
+)

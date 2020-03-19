@@ -5,6 +5,11 @@
  */
 namespace app\admin\sqls;
 
+use app\admin\model\User;
+use app\admin\model\Menu;
+use app\admin\model\Role;
+use app\admin\model\UserLoginLog;
+
 class Make {
 
     public $tableNamePre = ALL_PRE_NAME;
@@ -12,11 +17,12 @@ class Make {
     public $databaseIsExist = 'create database if not exists %s';
 
     protected $infos = array(
-        'user' => 'app\admin\model\User',
-        'user_role' => 'app\admin\model\UserRole',
-        'role' => 'app\admin\model\Role',
-        'menu_role' => 'app\admin\model\MenuRole',
-        'menu' => 'app\admin\model\Menu'
+        'user' => User::class,
+//        'user_role' => 'app\admin\model\UserRole',
+        'role' => Role::class,
+//        'menu_role' => 'app\admin\model\MenuRole',
+        'menu' => Menu::class,
+        'user_login_log' => UserLoginLog::class
     );
 
     // 用户(user) 用户组(user_group) 组(group && type = user|menu) 菜单组(menu_group) 菜单(menu)
@@ -89,12 +95,11 @@ create table if not exists `%s` (
     primary key (`order_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8 COMMENT='角色排序表';",
         // 记录 某用户 local_ip ua to_ip
-        'log' => "
+        'user_login_log' => "
 create table if not exists `%s` (
     `log_id` bigint unsigned NOT NULL AUTO_INCREMENT,
     `user_id` bigint unsigned NOT NULL,
     `user_name_en` varchar(50) NOT NULL,
-    `url_path` varchar(50) NOT NULL COMMENT '路由地址',
     `req_id` varchar(40) not null default '' comment '请求唯一ID',
     `req_params` text NOT NULL COMMENT '请求内容',
     `res_params` text not null comment '响应内容',
@@ -102,7 +107,8 @@ create table if not exists `%s` (
     `ua` varchar(100) not null default '',
     `update_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     primary key (`log_id`),
-    key (`url_path`, `operate_key`)
+    key (`user_name_en`),
+    key (`req_id`)
 ) ENGINE=INNODB DEFAULT CHARSET=utf8 COMMENT='日志';"
     ];
 
@@ -123,12 +129,8 @@ create table if not exists `%s` (
      * 生成 表属性（必须要先建model）
      */
     public function genFieldAttr() {
-        $funcName = 'get_service';
-        if (!function_exists($funcName)) {
-            $funcName = '';
-        }
-        $fails = array_map(function ($i) use ($funcName) {
-            return $funcName('mysql_utils')->descToAttr(new $i);
+        $fails = array_map(function ($i) {
+            return xu_get_service('mysql_utils')->descToAttr(new $i);
         }, $this->infos);
 
         var_export($fails);

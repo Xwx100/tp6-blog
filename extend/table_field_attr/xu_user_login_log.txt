@@ -1,0 +1,56 @@
+array (
+  'log_id' => 
+  array (
+    'type' => 'bigint(20) unsigned',
+    'null' => 'NO',
+    'before_field' => 'log_id',
+  ),
+  'user_id' => 
+  array (
+    'type' => 'bigint(20) unsigned',
+    'null' => 'NO',
+    'before_field' => 'user_id',
+  ),
+  'user_name_en' => 
+  array (
+    'type' => 'varchar(50)',
+    'null' => 'NO',
+    'before_field' => 'user_name_en',
+  ),
+  'req_id' => 
+  array (
+    'type' => 'varchar(40)',
+    'null' => 'NO',
+    'before_field' => 'req_id',
+  ),
+  'req_params' => 
+  array (
+    'type' => 'text',
+    'null' => 'NO',
+    'before_field' => 'req_params',
+  ),
+  'res_params' => 
+  array (
+    'type' => 'text',
+    'null' => 'NO',
+    'before_field' => 'res_params',
+  ),
+  'remote_addr' => 
+  array (
+    'type' => 'varchar(20)',
+    'null' => 'NO',
+    'before_field' => 'remote_addr',
+  ),
+  'ua' => 
+  array (
+    'type' => 'varchar(100)',
+    'null' => 'NO',
+    'before_field' => 'ua',
+  ),
+  'update_at' => 
+  array (
+    'type' => 'timestamp',
+    'null' => 'NO',
+    'before_field' => 'update_at',
+  ),
+)

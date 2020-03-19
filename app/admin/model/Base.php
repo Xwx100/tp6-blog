@@ -12,9 +12,9 @@ class Base extends Model {
     protected $addReFormat = true;
 
     public function edit(array $params) {
-        $ok = xu_get_service('mysql_utils')->judgeAddOrUp($params, [__CLASS__, 'add'], [__CLASS__, 'up'], $this->getPk());
-        return $this->handleData(
-            [self::getPk() => $params[self::getPk()]],
+        $ok = xu_get_service('mysql_utils')->judgeAddOrUp($params, [$this, 'add'], [$this, 'up'], $this->getPk());
+        return $this->wrapData(
+            [self::getPk() => $params[self::getPk()] ?? $ok],
             $ok ? '成功' : '失败',
             $ok ? 0 : 1
         );
@@ -29,7 +29,7 @@ class Base extends Model {
      *
      * @return array
      */
-    public function handleData($data, $msg, $code) {
+    public function wrapData($data, $msg, $code) {
         if ($this->addReFormat) {
             return xu_add_re_format((array)$data, $msg, $code);
         }

@@ -22,15 +22,20 @@ use think\Request;
 class Redirect {
 
     /**
+     * 中间件 重定向
+     *
      * @param Request     $request
      * @param string|null $url
      */
     public function start(Request $request, string $url = null) {
+        // 不是json 重定向  前端首页
         if (!$this->isJson($request)) {
-            redirect($url ?? APP_LOGIN_URL, 303)->send();
+            redirect($url ?? FRONT_LOGIN_URL, 303);
         } else {
-            json(xu_add_re_format(['url' => $url ?? APP_LOGIN_URL], '重定向url', 0))->send();
+            // 是json 重定向 后端登录接口
+            json(xu_add_re_format(['url' => $url ?? APP_LOGIN_URL], '重定向url', 0));
         }
+        exit();
     }
 
     public function isJson(Request $request) {

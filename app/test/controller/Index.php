@@ -4,13 +4,27 @@ namespace app\test\controller;
 use app\BaseController;
 use app\test\event\Event4;
 use app\test\provider\Provider1;
-
+use app\admin\sqls\Make;
 
 class Index extends BaseController
 {
     public function index()
     {
 
+    }
+
+    /**
+     * php public/index.php /test/index/get_admin_sql
+     */
+    public function get_admin_sql() {
+        (new Make())->start();
+    }
+
+    /*
+     * php public/index.php /test/index/get_table_attr
+     */
+    public function get_table_attr() {
+        (new Make())->genFieldAttr();
     }
 
     /**

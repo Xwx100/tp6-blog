@@ -7,6 +7,7 @@ use think\exception\Handle;
 use think\exception\HttpException;
 use think\exception\HttpResponseException;
 use think\exception\ValidateException;
+use think\helper\Arr;
 use think\Response;
 use Throwable;
 
@@ -57,8 +58,26 @@ class ExceptionHandle extends Handle
     public function render($request, Throwable $e): Response
     {
         // 添加自定义异常处理机制
+        if (empty(xu_get_service('redirect')->isJson($request))) {
+            // 其他错误交给系统处理
+            return parent::render($request, $e);
+        }
+        // 不是get 请求 统一json
+        $re = parent::convertExceptionToArray($e);
+        $re['msg'] = Arr::pull($re, 'message');
+        // 测试 统一全部
+        if ($this->isDebug()) {
+            return json($re);
+        }
+        // 线上 仅仅只有两个
+        return json(Arr::only($re, ['code', 'msg']));
+    }
 
-        // 其他错误交给系统处理
-        return parent::render($request, $e);
+    /**
+     *
+     * @return bool
+     */
+    public function isDebug() {
+        return $this->app->isDebug();
     }
 }

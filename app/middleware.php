@@ -10,5 +10,4 @@ return [
 //    \think\middleware\SessionInit::class,
     middles\session\CliSession::class,
     middles\login\Log::class,
-    middles\login\Login::class,
 ];

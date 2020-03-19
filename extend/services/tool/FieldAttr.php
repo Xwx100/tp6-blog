@@ -35,7 +35,7 @@ trait FieldAttr {
             }
             return array_change_key_case($row, CASE_LOWER);
         }, $data);
-        $fieldAttr = array_combine(array_column($data, 'field'), array_values($data));
+        $fieldAttr = array_combine(array_column($data, 'before_field'), array_values($data));
         $path = self::$info['field_attr_path'] ?? implode('/', [App::getRootPath(), 'extend', 'table_field_attr']);
         if (false === is_dir($path)) {
             mkdir($path);

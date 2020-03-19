@@ -17,12 +17,25 @@ use think\facade\Log;
  */
 class Admin {
 
+    /**
+     * 表属性
+     * @var array
+     */
     protected $fieldAttr = [];
+    /**
+     * 注入的 前端参数
+     * @var null
+     */
     protected $params = null;
     /**
+     * 基础表
      * @var Db|null
      */
     protected $base = null;
+    /**
+     * 注册表属性
+     * @var array
+     */
     protected $registers = [
         'user'      => [
             'alias'      => 'a',
@@ -189,9 +202,66 @@ class Admin {
                     'null'         => 'NO',
                 ),
             )
-        ]
+        ],
+        'user_login_log' => array (
+            'log_id' =>
+                array (
+                    'type' => 'bigint(20) unsigned',
+                    'null' => 'NO',
+                    'before_field' => 'log_id',
+                ),
+            'user_id' =>
+                array (
+                    'type' => 'bigint(20) unsigned',
+                    'null' => 'NO',
+                    'before_field' => 'user_id',
+                ),
+            'user_name_en' =>
+                array (
+                    'type' => 'varchar(50)',
+                    'null' => 'NO',
+                    'before_field' => 'user_name_en',
+                ),
+            'req_id' =>
+                array (
+                    'type' => 'varchar(40)',
+                    'null' => 'NO',
+                    'before_field' => 'req_id',
+                ),
+            'req_params' =>
+                array (
+                    'type' => 'text',
+                    'null' => 'NO',
+                    'before_field' => 'req_params',
+                ),
+            'res_params' =>
+                array (
+                    'type' => 'text',
+                    'null' => 'NO',
+                    'before_field' => 'res_params',
+                ),
+            'remote_addr' =>
+                array (
+                    'type' => 'varchar(20)',
+                    'null' => 'NO',
+                    'before_field' => 'remote_addr',
+                ),
+            'ua' =>
+                array (
+                    'type' => 'varchar(100)',
+                    'null' => 'NO',
+                    'before_field' => 'ua',
+                ),
+            'update_at' =>
+                array (
+                    'type' => 'timestamp',
+                    'null' => 'NO',
+                    'before_field' => 'update_at',
+                ),
+        )
     ];
     /**
+     * 增加 名字前缀 函数
      * @var callable|null
      */
     protected $addNamePre = null;
@@ -271,14 +341,27 @@ class Admin {
      * @return $this
      */
     public function initBase(string $name) {
+        if ($this->base instanceof $name) {
+            return $this;
+        }
+        // prop
+        $prop = $this->getRegister($name);
         // 设置基础模型表
-        $this->base = Db::name($name)->alias($this->registers[$name]['alias']);
+        $this->base = Db::name($name)->alias($prop['alias']);
         // 设置基础属性
-        $this->fieldAttr = $this->utils->addProp($this->registers[$name]['field_attr'], ['alias' => $this->registers[$name]['alias']]);
+        $this->fieldAttr = $this->utils->addProp($prop['field_attr'], ['alias' => $prop['alias']]);
 
         return $this;
     }
 
+    /**
+     * 列表
+     *
+     * @return \think\Collection
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
     public function lists() {
         $field = $this->utils->getField($this->params, $this->fieldAttr);
         $where = $this->utils->getWhere($this->fieldAttr);
@@ -293,6 +376,8 @@ class Admin {
     }
 
     /**
+     * 增加 记录 日志
+     *
      * @param array $params
      *
      * @return int|string
@@ -315,7 +400,21 @@ class Admin {
         }
         $this->utils->changeType($params, ['req_params', 'res_params'], 'array2Json');
 
-        return $this->initBase('log')->base->strict(false)->json(['req_params', 'res_params'])->insertGetId($params);
+        return $this->initBase('user_login_log')->base->strict(false)->json(['req_params', 'res_params'])->insertGetId($params);
+    }
+
+    /**
+     * @param $name
+     *
+     * @return mixed
+     * @throws \Exception
+     */
+    public function &getRegister($name) {
+        $prop = &$this->registers[$name];
+        if (!isset($prop)) {
+            throw new \Exception(xu_str_f('[ admin.getRegister ] 为获取表=%s属性', $name));
+        }
+        return $prop;
     }
 
     public function addNamePre($name) {

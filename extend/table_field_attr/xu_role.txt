@@ -1,0 +1,32 @@
+array (
+  'role_id' => 
+  array (
+    'type' => 'bigint(20) unsigned',
+    'null' => 'NO',
+    'before_field' => 'role_id',
+  ),
+  'role_name_en' => 
+  array (
+    'type' => 'varchar(50)',
+    'null' => 'NO',
+    'before_field' => 'role_name_en',
+  ),
+  'role_name_zh' => 
+  array (
+    'type' => 'varchar(50)',
+    'null' => 'NO',
+    'before_field' => 'role_name_zh',
+  ),
+  'update_at' => 
+  array (
+    'type' => 'timestamp',
+    'null' => 'NO',
+    'before_field' => 'update_at',
+  ),
+  'is_deleted' => 
+  array (
+    'type' => 'tinyint(4)',
+    'null' => 'NO',
+    'before_field' => 'is_deleted',
+  ),
+)

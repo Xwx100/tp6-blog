@@ -341,7 +341,8 @@ class Admin {
      * @return $this
      */
     public function initBase(string $name) {
-        if ($this->base instanceof $name) {
+        // 复用
+        if (isset($this->base) && $this->base->getName() === $name) {
             return $this;
         }
         // prop
@@ -352,6 +353,54 @@ class Admin {
         $this->fieldAttr = $this->utils->addProp($prop['field_attr'], ['alias' => $prop['alias']]);
 
         return $this;
+    }
+
+    /**
+     * 获取用户 所处的角色 所拥有的菜单
+     *
+     * @param array $params
+     *
+     * @return \think\Collection
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getUserMenuRole(array $params) {
+        $params = array_merge($params, [
+            'field' => ['user_id', 'user_name_en','menu_ids', 'role_ids'],
+            'join' => [
+                ['no_pre_name' => 'user_role', 'type' => 'left'],
+                ['no_pre_name' => 'role', 'type' => 'left'],
+                ['no_pre_name' => 'menu_role', 'type' => 'left'],
+                ['no_pre_name' => 'menu', 'type' => 'left'],
+            ],
+            'group_by' => ['user_id'],
+            'order_by' => [
+                ['sort_field' => 'user_id', 'sort_type' => 'desc']
+            ],
+        ]);
+        $userRoleMenus = $this->initParams($params)->lists();
+
+        return $userRoleMenus;
+    }
+
+    /**
+     * 处理
+     *
+     * @param array $menus ['menu_name_en', 'path' => '', 'level', 'children' => []]
+     * @param mixed $levels
+     */
+    public function handleMenu(array $menus, $levels = 1) {
+        $tmp = [];
+        foreach ($menus as $menu) {
+            $curPid = $levels;
+            if ($menu['level'] == $curPid) {
+                $menu['children'] = $this->handleMenu($menus, ++ $levels);
+                $tmp[] = $menu;
+            }
+        }
+
+        return $tmp;
     }
 
     /**

@@ -7,6 +7,7 @@ use think\exception\Handle;
 use think\exception\HttpException;
 use think\exception\HttpResponseException;
 use think\exception\ValidateException;
+use think\facade\Log;
 use think\helper\Arr;
 use think\Response;
 use Throwable;
@@ -63,8 +64,7 @@ class ExceptionHandle extends Handle
             return parent::render($request, $e);
         }
         // 不是get 请求 统一json
-        $re = parent::convertExceptionToArray($e);
-        $re['msg'] = Arr::pull($re, 'message');
+        $re = $this->convertExceptionToArray($e);
         // 测试 统一全部
         if ($this->isDebug()) {
             return json($re);
@@ -79,5 +79,54 @@ class ExceptionHandle extends Handle
      */
     public function isDebug() {
         return $this->app->isDebug();
+    }
+
+    protected function convertExceptionToArray(Throwable $exception): array
+    {
+        if ($this->app->isDebug()) {
+            // 调试模式，获取详细的错误信息
+            $traces = [];
+            $nextException = $exception;
+            do {
+                $traces[] = [
+                    'name'    => get_class($nextException),
+                    'file'    => $nextException->getFile(),
+                    'line'    => $nextException->getLine(),
+                    'code'    => $this->getCode($nextException),
+                    'msg' => $this->getMessage($nextException),
+//                    'trace'   => $nextException->getTrace(),
+                    'source'  => $this->getSourceCode($nextException),
+                ];
+            } while ($nextException = $nextException->getPrevious());
+            $data = [
+                'code'    => $this->getCode($exception),
+                'msg' => $this->getMessage($exception),
+                'traces'  => $traces,
+                'datas'   => $this->getExtendData($exception),
+                'tables'  => [
+                    'GET Data'              => $this->app->request->get(),
+                    'POST Data'             => $this->app->request->post(),
+                    'Files'                 => $this->app->request->file(),
+                    'Cookies'               => $this->app->request->cookie(),
+                    'Session'               => $this->app->session->all(),
+                    'Server/Request Data'   => $this->app->request->server(),
+                    'Environment Variables' => $this->app->request->env(),
+                    'ThinkPHP Constants'    => $this->getConst(),
+                ],
+            ];
+        } else {
+            // 部署模式仅显示 Code 和 msg
+            $data = [
+                'code'    => $this->getCode($exception),
+                'msg' => $this->getMessage($exception),
+            ];
+
+            if (!$this->app->config->get('app.show_error_msg')) {
+                // 不显示详细错误信息
+                $data['msg'] = $this->app->config->get('app.error_message');
+            }
+        }
+
+        return $data;
     }
 }

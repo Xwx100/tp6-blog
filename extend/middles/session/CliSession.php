@@ -18,74 +18,87 @@ use think\Response;
  *
  * @package middles\session
  */
-class CliSession extends SessionInit{
+class CliSession extends SessionInit {
 
-    public $isCli = null;
+    public $isOpen = null;
+    public $isLoginUrl = null;
 
     public function __construct(App $app, \think\Session $session) {
         parent::__construct($app, $session);
-        $this->setCli();
+        $this->setOpen();
     }
 
     public function handle($request, Closure $next) {
+        // 判断 当前url 是否是登录页
+        $curUrl = $request->url();
+        foreach([APP_LOGIN_URL, FRONT_LOGIN_URL] as $url) {
+            if (false !== stripos($curUrl, $url)) {
+                $this->isLoginUrl = true;
+                break;
+            }
+        }
+
         return $this->assign(func_get_args(), function (Request $request, Closure $next) {
-            return $next($request);
-        }, function (Request $request, Closure $next) {
-            $res = parent::handle($request, $next);
-
-            $userInfo = \app()->session->get(SESSION_USER_INFO);
-            if (!isset($userInfo)) {
-                // 不处于登录页 且 没有用户信息 跳转 登录页
-                $curUrl = $request->url();
-                $inLoginAddr = null;
-                foreach([APP_LOGIN_URL, FRONT_LOGIN_URL] as $url) {
-                    if (false !== stripos($curUrl, $url)) {
-                        $inLoginAddr = true;
-                        break;
-                    }
-                }
-                if (empty($inLoginAddr)) {
-                    xu_get_service('redirect')->start($request);
-                } else  {
-                    $keys = ['user_name_en', 'password'];
-                    $params = \request()->param($keys);
-                    foreach ($keys as $key) {
-                        if (empty($params[$key])) {
-                            xu_json_send(xu_add_re_format([], "用户名为空 | 密码为空", 1));
-                        }
-                    }
-                    // 增加参数
-                    $params = array_merge($params, ['is_deleted' => 0]);
-                    // 查看用户菜单
-                    $params = array_merge($params, [
-                        'field' => ['user_id', 'user_name_en','menu_ids', 'role_ids'],
-                        'join' => [
-                            ['no_pre_name' => 'user_role', 'type' => 'left'],
-                            ['no_pre_name' => 'role', 'type' => 'left'],
-                            ['no_pre_name' => 'menu_role', 'type' => 'left'],
-                            ['no_pre_name' => 'menu', 'type' => 'left'],
-                        ],
-                        'group_by' => ['user_id'],
-                        'order_by' => [
-                            ['sort_field' => 'user_id', 'sort_type' => 'desc']
-                        ],
-                    ]);
-                    $userRoleMenus = xu_get_service('admin', ['params' => $params])->lists();
-                    if ($userRoleMenus->isEmpty()) {
-                        xu_json_send(xu_add_re_format([], '账号不存在 | 密码错误', 1));
-                    }
-                    if (empty($userRoleMenus[0]['menu_ids'])) {
-                        xu_json_send(xu_add_re_format($userRoleMenus[0], '该用户 还未 分配权限', 1));
-                    }
-                    $userRoleMenus = $userRoleMenus->toArray();
-
-                    Session::set(SESSION_USER_INFO, $userRoleMenus);
-                    xu_get_service('admin')->addLog($userRoleMenus);
-
-                    xu_json_send(xu_add_re_format($userRoleMenus[0], '登录成功', 0));
-                }
+            // 不开启 权限限制 默认用户
+            $this->app->session->set(SESSION_USER_INFO, config('xu_admin.session_value'));
+            if (!empty($this->isLoginUrl)) {
+                xu_json_send(xu_add_re_format($this->app->session->get(SESSION_USER_INFO), '已经登录'));
             }
 
+            return $next($request);
+        }, function (Request $request, Closure $next) {
+            // 开启 session 权限限制
+            $this->base($request);
+
+            $res = $next($request);
+
+            $res->setSession($this->session);
+            $cookieName = config('session.name');
+            if (!$request->cookie($cookieName)) {
+                $this->app->cookie->set($cookieName, $this->session->getId());
+            }
+
+            $userInfo = \app()->session->get(SESSION_USER_INFO);
+
+            // 处于登录页 且 有用户信息 已经登录成功
+            if (isset($userInfo)) {
+                return $res;
+            }
+            // 不处于登录页 且 没有用户信息 跳转 登录页
+            if (empty($this->isLoginUrl)) {
+                xu_get_service('redirect')->start($request);
+                return $res;
+            }
+            $keys = ['user_name_en', 'password'];
+            $params = \request()->param($keys);
+            foreach ($keys as $key) {
+                if (empty($params[$key])) {
+                    xu_json_send(xu_add_re_format([], "用户名为空 | 密码为空", 1));
+                }
+            }
+            // 增加参数
+            $params = array_merge($params, ['is_deleted' => 0]);
+            // 查看用户菜单
+            $userRoleMenus = xu_get_service('admin')->initParams($params)->lists()[0];
+            if ($userRoleMenus->isEmpty()) {
+                xu_json_send(xu_add_re_format([], '账号不存在 | 密码错误', 1));
+            }
+            if ($userRoleMenus['role_ids']) {
+                xu_json_send(xu_add_re_format([], '该用户 还未 分配角色', 1));
+            }
+            if (array_intersect(config('xu_admin.white_list'), $userRoleMenus['role_ids'])) {
+
+            } elseif (array_intersect(config('xu_admin.black_list'), $userRoleMenus['role_ids'])) {
+                xu_json_send(xu_add_re_format($userRoleMenus, '该用户 处于黑名单', 1));
+            } elseif (empty($userRoleMenus['menu_ids'])) {
+                xu_json_send(xu_add_re_format($userRoleMenus, '该用户 还未 分配权限', 1));
+            }
+            $userRoleMenus = $userRoleMenus->toArray();
+
+            $this->app->session->set(SESSION_USER_INFO, $userRoleMenus);
+            xu_get_service('admin')->addLog($userRoleMenus);
+
+            xu_json_send(xu_add_re_format($userRoleMenus, '登录成功', 0));
             return $res;
         });
     }
@@ -98,26 +111,46 @@ class CliSession extends SessionInit{
         });
     }
 
+    public function base(Request $request) {
+        // Session初始化
+        $varSessionId = $this->app->config->get('session.var_session_id');
+        $cookieName   = $this->session->getName();
+
+        if ($varSessionId && $request->request($varSessionId)) {
+            $sessionId = $request->request($varSessionId);
+        } else {
+            $sessionId = $request->cookie($cookieName);
+        }
+
+        if ($sessionId) {
+            $this->session->setId($sessionId);
+        }
+
+        $this->session->init();
+
+        $request->withSession($this->session);
+    }
+
     /**
      * 分配
      *
      * @param          $args
-     * @param callable $isCli
-     * @param callable $noCli
+     * @param callable $isOpen
+     * @param callable $noOpen
      *
      * @return mixed
      */
-    public function assign($args , callable $isCli, callable $noCli) {
-        return call_user_func_array($this->isCli ? $isCli : $noCli, $args);
+    public function assign($args , callable $isOpen, callable $noOpen) {
+        return call_user_func_array($this->isOpen ? $isOpen : $noOpen, $args);
     }
 
     /**
-     * 判断 cli
+     * 是否 开启 session
      *
      * @return $this
      */
-    public function setCli() {
-        $this->isCli = $this->app->request->isCli();
+    public function setOpen() {
+        $this->isOpen = $this->app->request->isCli() || empty(config('xu_admin.open_session'));
         return $this;
     }
 }

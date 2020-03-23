@@ -7,7 +7,7 @@ if (!function_exists('xu_add_name_pre')) {
     }
 }
 if (!function_exists('xu_add_re_format')) {
-    function xu_add_re_format(array $data, string $message, int $code) {
+    function xu_add_re_format(array $data, string $message, int $code = 0) {
         return [
             'data' => $data,
             'msg'  => $message,

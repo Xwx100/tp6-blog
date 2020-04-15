@@ -3,6 +3,7 @@ namespace app;
 
 use think\db\exception\DataNotFoundException;
 use think\db\exception\ModelNotFoundException;
+use think\db\exception\PDOException;
 use think\exception\Handle;
 use think\exception\HttpException;
 use think\exception\HttpResponseException;
@@ -58,6 +59,9 @@ class ExceptionHandle extends Handle
      */
     public function render($request, Throwable $e): Response
     {
+        if ($e instanceof PDOException) {
+            Log::write($this->app->db->getLastSql());
+        }
         // 添加自定义异常处理机制
         if (empty(xu_get_service('redirect')->isJson($request))) {
             // 其他错误交给系统处理
@@ -83,25 +87,12 @@ class ExceptionHandle extends Handle
 
     protected function convertExceptionToArray(Throwable $exception): array
     {
-        if ($this->app->isDebug()) {
+        if ($this->isDebug()) {
             // 调试模式，获取详细的错误信息
-            $traces = [];
-            $nextException = $exception;
-            do {
-                $traces[] = [
-                    'name'    => get_class($nextException),
-                    'file'    => $nextException->getFile(),
-                    'line'    => $nextException->getLine(),
-                    'code'    => $this->getCode($nextException),
-                    'msg' => $this->getMessage($nextException),
-//                    'trace'   => $nextException->getTrace(),
-                    'source'  => $this->getSourceCode($nextException),
-                ];
-            } while ($nextException = $nextException->getPrevious());
             $data = [
                 'code'    => $this->getCode($exception),
                 'msg' => $this->getMessage($exception),
-                'traces'  => $traces,
+                'traces'  => explode("\n", $exception->getTraceAsString()),
                 'datas'   => $this->getExtendData($exception),
                 'tables'  => [
                     'GET Data'              => $this->app->request->get(),

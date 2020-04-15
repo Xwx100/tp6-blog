@@ -8,6 +8,6 @@ return [
     // \think\middleware\LoadLangPack::class,
     // Session初始化
 //    \think\middleware\SessionInit::class,
-    middles\session\CliSession::class,
+//    middles\session\CliSession::class,
     middles\login\Log::class,
 ];

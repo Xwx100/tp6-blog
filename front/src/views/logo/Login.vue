@@ -47,6 +47,7 @@ export default {
 			this.$refs[formName].validate((valid) => {
 				if (valid) {
 					this.$axios.post('/api/admin/index/login',this.loginUser).then(res => {
+						localStorage.setItem('userInfo', JSON.stringify(res.data.data))
 						this.$router.push('/index')
 		 			})
 				}

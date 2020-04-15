@@ -19,25 +19,31 @@ class Admin {
 
     /**
      * 表属性
+     *
      * @var array
      */
     protected $fieldAttr = [];
     /**
      * 注入的 前端参数
+     *
      * @var null
      */
     protected $params = null;
     /**
      * 基础表
+     *
      * @var Db|null
      */
     protected $base = null;
+    // 不打开重命名
+    protected $baseNoOpenAlis = null;
     /**
      * 注册表属性
+     *
      * @var array
      */
     protected $registers = [
-        'user'      => [
+        'user'           => [
             'alias'      => 'a',
             'field_attr' => array(
                 'user_id'      => array(
@@ -85,7 +91,7 @@ class Admin {
                 ),
             )
         ],
-        'menu'      => [
+        'menu'           => [
             'alias'      => 'b',
             'on'         => 'b.menu_id = e.menu_id',
             'field_attr' => array(
@@ -119,11 +125,12 @@ class Admin {
                 ),
                 'menu_ids'     => array(
                     'before_field' => 'menu_id',
+                    'type'         => 'json',
                     'format'       => 'group_concat(%s)'
                 )
             )
         ],
-        'role'      => [
+        'role'           => [
             'alias'      => 'c',
             'on'         => 'c.role_id = d.role_id',
             'field_attr' => array(
@@ -147,11 +154,12 @@ class Admin {
                 ),
                 'role_ids'     => array(
                     'before_field' => 'role_id',
+                    'type'         => 'json',
                     'format'       => 'group_concat(%s)'
                 )
             )
         ],
-        'user_role' => [
+        'user_role'      => [
             'alias'      => 'd',
             'on'         => 'a.user_id = d.user_id',
             'field_attr' => array(
@@ -177,7 +185,7 @@ class Admin {
                 ),
             )
         ],
-        'menu_role' => [
+        'menu_role'      => [
             'alias'      => 'e',
             'on'         => 'e.role_id = c.role_id',
             'field_attr' => array(
@@ -203,70 +211,65 @@ class Admin {
                 ),
             )
         ],
-        'user_login_log' => array (
-            'log_id' =>
-                array (
-                    'type' => 'bigint(20) unsigned',
-                    'null' => 'NO',
+        'user_login_log' => [
+            'alias' => 'f',
+            'field_attr' => array(
+                'log_id'       => array(
+                    'type'         => 'bigint(20) unsigned',
+                    'null'         => 'NO',
                     'before_field' => 'log_id',
                 ),
-            'user_id' =>
-                array (
-                    'type' => 'bigint(20) unsigned',
-                    'null' => 'NO',
+                'user_id'      => array(
+                    'type'         => 'bigint(20) unsigned',
+                    'null'         => 'NO',
                     'before_field' => 'user_id',
                 ),
-            'user_name_en' =>
-                array (
-                    'type' => 'varchar(50)',
-                    'null' => 'NO',
+                'user_name_en' => array(
+                    'type'         => 'varchar(50)',
+                    'null'         => 'NO',
                     'before_field' => 'user_name_en',
                 ),
-            'req_id' =>
-                array (
-                    'type' => 'varchar(40)',
-                    'null' => 'NO',
+                'req_id'       => array(
+                    'type'         => 'varchar(40)',
+                    'null'         => 'NO',
                     'before_field' => 'req_id',
                 ),
-            'req_params' =>
-                array (
-                    'type' => 'text',
-                    'null' => 'NO',
+                'req_params'   => array(
+                    'type'         => 'text',
+                    'null'         => 'NO',
                     'before_field' => 'req_params',
                 ),
-            'res_params' =>
-                array (
-                    'type' => 'text',
-                    'null' => 'NO',
+                'res_params'   => array(
+                    'type'         => 'text',
+                    'null'         => 'NO',
                     'before_field' => 'res_params',
                 ),
-            'remote_addr' =>
-                array (
-                    'type' => 'varchar(20)',
-                    'null' => 'NO',
+                'remote_addr'  => array(
+                    'type'         => 'varchar(20)',
+                    'null'         => 'NO',
                     'before_field' => 'remote_addr',
                 ),
-            'ua' =>
-                array (
-                    'type' => 'varchar(100)',
-                    'null' => 'NO',
+                'ua'           => array(
+                    'type'         => 'varchar(100)',
+                    'null'         => 'NO',
                     'before_field' => 'ua',
                 ),
-            'update_at' =>
-                array (
-                    'type' => 'timestamp',
-                    'null' => 'NO',
+                'update_at'    => array(
+                    'type'         => 'timestamp',
+                    'null'         => 'NO',
                     'before_field' => 'update_at',
                 ),
-        )
+            )
+        ]
     ];
     /**
      * 增加 名字前缀 函数
+     *
      * @var callable|null
      */
     protected $addNamePre = null;
     /**
-     * @var null|MysqlUtils
+     * @var MysqlUtils|null
      */
     protected $utils = null;
 
@@ -278,10 +281,8 @@ class Admin {
      * @param callable|null   $addNamePre 数据库 表 前缀
      * @param MysqlUtils|null $utils      数据库 通用 工具包
      */
-    public function __construct(array $params, string $name = null, callable $addNamePre = null, MysqlUtils $utils = null) {
-        $this->initFunc($addNamePre, $utils)
-            ->initBase($name ?? 'user')
-            ->initParams($params);
+    public function __construct(array $params = [], string $name = null, callable $addNamePre = null, MysqlUtils $utils = null) {
+        $this->initFunc($addNamePre, $utils)->initBase($name ?? 'user')->initParams($params);
     }
 
     /**
@@ -302,7 +303,7 @@ class Admin {
         // 设置mysql前缀
         if (!isset($addNamePre)) {
             $this->addNamePre = function ($name) {
-                return implode('_', [ALL_PRE_NAME ?? 'xu', $name]);
+                return implode('_', [APP_NAME_LOW ?? 'xu', $name]);
             };
         } else {
             $this->addNamePre = $addNamePre;
@@ -342,13 +343,16 @@ class Admin {
      */
     public function initBase(string $name) {
         // 复用
-        if (isset($this->base) && $this->base->getName() === $name) {
+        if (isset($this->base) && $this->base->getName() === $this->addNamePre($name)) {
             return $this;
         }
         // prop
         $prop = $this->getRegister($name);
-        // 设置基础模型表
-        $this->base = Db::name($name)->alias($prop['alias']);
+        $this->base = Db::name($name);
+        if (empty($this->baseNoOpenAlis)) {
+            // 设置基础模型表
+            $this->base->alias($prop['alias']);
+        }
         // 设置基础属性
         $this->fieldAttr = $this->utils->addProp($prop['field_attr'], ['alias' => $prop['alias']]);
 
@@ -357,18 +361,17 @@ class Admin {
 
     /**
      * 获取用户 所处的角色 所拥有的菜单
-     *
      * @param array $params
      *
-     * @return \think\Collection
+     * @return array
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
     public function getUserMenuRole(array $params) {
         $params = array_merge($params, [
-            'field' => ['user_id', 'user_name_en','menu_ids', 'role_ids'],
-            'join' => [
+            'field'    => ['user_id', 'user_name_en', 'menu_ids', 'role_ids'],
+            'join'     => [
                 ['no_pre_name' => 'user_role', 'type' => 'left'],
                 ['no_pre_name' => 'role', 'type' => 'left'],
                 ['no_pre_name' => 'menu_role', 'type' => 'left'],
@@ -379,7 +382,16 @@ class Admin {
                 ['sort_field' => 'user_id', 'sort_type' => 'desc']
             ],
         ]);
-        $userRoleMenus = $this->initParams($params)->lists();
+        $this->baseNoOpenAlis = true;
+        $userRoleMenus = $this->initParams($params)->lists()->toArray();
+
+        $jsonKeys = $this->utils->getJsonKeys($this->fieldAttr, 'json');
+        foreach ($userRoleMenus as &$row) {
+            foreach ($jsonKeys as $k) {
+                $row[$k] = $row[$k] ? explode(',', $row[$k]) : [];
+            }
+        }
+        unset($row);
 
         return $userRoleMenus;
     }
@@ -395,7 +407,7 @@ class Admin {
         foreach ($menus as $menu) {
             $curPid = $levels;
             if ($menu['level'] == $curPid) {
-                $menu['children'] = $this->handleMenu($menus, ++ $levels);
+                $menu['children'] = $this->handleMenu($menus, ++$levels);
                 $tmp[] = $menu;
             }
         }
@@ -433,23 +445,29 @@ class Admin {
      */
     public function addLog(array $params) {
         if (empty($params['user_id'])) {
-            $params = array_merge($params, app()->session->get(SESSION_USER_INFO));
+            $params = array_merge($params, app()->session->get(XU_SESSION_CHECK_KEY));
+        }
+        if (empty($params['req_id'])) {
+            $params['req_id'] = APP_UUID;
         }
         if (empty($params['req_params'])) {
             $params['req_params'] = app()->request->param();
         }
         if (empty($params['res_params'])) {
-            $params['res_params'] = response()->getData();
+            $params['res_params'] = [];
         }
         if (empty($params['remote_addr'])) {
             $params['remote_addr'] = app()->request->ip();
         }
         if (empty($params['ua'])) {
-            $params['ua'] = app()->request->header('user_agent');
+            $params['ua'] = substr(app()->request->header('user_agent'), 0, 100);
         }
         $this->utils->changeType($params, ['req_params', 'res_params'], 'array2Json');
 
-        return $this->initBase('user_login_log')->base->strict(false)->json(['req_params', 'res_params'])->insertGetId($params);
+        return $this->setBaseNoOpenAlias()->initBase('user_login_log')->base->strict(false)->json([
+            'req_params',
+            'res_params'
+        ])->insertGetId($params);
     }
 
     /**
@@ -477,6 +495,12 @@ class Admin {
             // left join 设置唯一性
             $this->fieldAttr = (array)$this->fieldAttr + $this->utils->addProp((array)$register['field_attr'], ['alias' => $register['alias']]);
         }
+    }
+
+    public function setBaseNoOpenAlias() {
+        $this->baseNoOpenAlis = true;
+
+        return $this;
     }
 
 }

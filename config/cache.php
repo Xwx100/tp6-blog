@@ -6,12 +6,12 @@
 
 return [
     // 默认缓存驱动
-    'default' => env('cache.driver', CACHE_STORE),
+    'default' => env('cache.driver', XU_CACHE_DRIVER_DEFAULT),
 
     // 缓存连接方式配置
     'stores'  => [
         // file
-        'file'             => [
+        'file'                  => [
             // 驱动方式
             'type'       => 'File',
             // 缓存保存目录
@@ -26,18 +26,6 @@ return [
             'serialize'  => [],
         ],
         // redis
-        STORE_ADD_REDIS => [
-            'type'       => STORE_ADD_REDIS,
-            'host'       => '127.0.0.1',
-            'port'       => 6379,
-            'password'   => '',
-            'select'     => 0,
-            'timeout'    => 0,
-            'expire'     => 0,
-            'persistent' => false,
-            'prefix'     => '',
-            'tag_prefix' => 'tag:',
-            'serialize'  => [],
-        ],
+        XU_CACHE_DRIVER_DEFAULT => XU_CACHE_DRIVER_CONF[XU_CACHE_DRIVER_DEFAULT]
     ],
 ];

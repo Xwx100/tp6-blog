@@ -37,6 +37,9 @@ class Log implements Middle {
     public function end(Response $res) {
         \think\facade\Log::write('Log');
         if (is_array($resParams = $res->getData())) {
+            array_merge($resParams, [
+                'total_time' => app()->getBeginTime() - time()
+            ]);
             \think\facade\Log::params($resParams);
         }
     }

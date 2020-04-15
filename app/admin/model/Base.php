@@ -5,9 +5,8 @@ namespace app\admin\model;
 
 
 use think\db\Query;
-use think\Model;
 
-class Base extends Model {
+class Base extends \XuModel {
 
     protected $addReFormat = true;
 

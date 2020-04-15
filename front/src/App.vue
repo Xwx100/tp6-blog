@@ -9,12 +9,12 @@
   export default {
     name:"App",
     created () { //持久化登录
-      if(localStorage.eleToken) {
-        //获取token解析
-        const decode = jwt_decode(localStorage.eleToken);
+      let userInfo
+      if(userInfo = JSON.parse(localStorage.userInfo)) {
         //存储vuex中
-        this.$store.dispatch('setAuthenticated' , !this.isEmpty(decode))
-				this.$store.dispatch('setUSER',decode)
+        this.$store.dispatch('setAuthenticated' , !this.isEmpty(userInfo))
+        this.$store.dispatch('setUSER', userInfo)
+        console.log(userInfo)
       }
     },
     methods:{

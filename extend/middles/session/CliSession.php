@@ -21,7 +21,7 @@ use think\Response;
 class CliSession extends SessionInit {
 
     public $isOpen = null;
-    public $isLoginUrl = null;
+    public $onLoginUrl = null;
 
     public function __construct(App $app, \think\Session $session) {
         parent::__construct($app, $session);
@@ -33,16 +33,16 @@ class CliSession extends SessionInit {
         $curUrl = $request->url();
         foreach([APP_LOGIN_URL, FRONT_LOGIN_URL] as $url) {
             if (false !== stripos($curUrl, $url)) {
-                $this->isLoginUrl = true;
+                $this->onLoginUrl = true;
                 break;
             }
         }
 
-        return $this->assign(func_get_args(), function (Request $request, Closure $next) {
+        return $this->assignOpen(func_get_args(), function (Request $request, Closure $next) {
             // 不开启 权限限制 默认用户
-            $this->app->session->set(SESSION_USER_INFO, config('xu_admin.session_value'));
-            if (!empty($this->isLoginUrl)) {
-                xu_json_send(xu_add_re_format($this->app->session->get(SESSION_USER_INFO), '已经登录'));
+            $this->app->session->set(XU_SESSION_CHECK_KEY, config('cli_session.session_value'));
+            if ($this->onLoginUrl) {
+                return xu_json_send(xu_add_re_format($this->app->session->get(XU_SESSION_CHECK_KEY), '已经登录'));
             }
 
             return $next($request);
@@ -58,14 +58,14 @@ class CliSession extends SessionInit {
                 $this->app->cookie->set($cookieName, $this->session->getId());
             }
 
-            $userInfo = \app()->session->get(SESSION_USER_INFO);
+            $userInfo = \app()->session->get(XU_SESSION_CHECK_KEY);
 
             // 处于登录页 且 有用户信息 已经登录成功
             if (isset($userInfo)) {
                 return $res;
             }
             // 不处于登录页 且 没有用户信息 跳转 登录页
-            if (empty($this->isLoginUrl)) {
+            if (empty($this->onLoginUrl)) {
                 xu_get_service('redirect')->start($request);
                 return $res;
             }
@@ -79,11 +79,11 @@ class CliSession extends SessionInit {
             // 增加参数
             $params = array_merge($params, ['is_deleted' => 0]);
             // 查看用户菜单
-            $userRoleMenus = xu_get_service('admin')->initParams($params)->lists()[0];
-            if ($userRoleMenus->isEmpty()) {
+            $userRoleMenus = xu_get_service('admin')->getUserMenuRole($params)[0];
+            if (empty($userRoleMenus)) {
                 xu_json_send(xu_add_re_format([], '账号不存在 | 密码错误', 1));
             }
-            if ($userRoleMenus['role_ids']) {
+            if (empty($userRoleMenus['role_ids'])) {
                 xu_json_send(xu_add_re_format([], '该用户 还未 分配角色', 1));
             }
             if (array_intersect(config('xu_admin.white_list'), $userRoleMenus['role_ids'])) {
@@ -93,10 +93,9 @@ class CliSession extends SessionInit {
             } elseif (empty($userRoleMenus['menu_ids'])) {
                 xu_json_send(xu_add_re_format($userRoleMenus, '该用户 还未 分配权限', 1));
             }
-            $userRoleMenus = $userRoleMenus->toArray();
 
-            $this->app->session->set(SESSION_USER_INFO, $userRoleMenus);
             xu_get_service('admin')->addLog($userRoleMenus);
+            $this->app->session->set(XU_SESSION_CHECK_KEY, $userRoleMenus);
 
             xu_json_send(xu_add_re_format($userRoleMenus, '登录成功', 0));
             return $res;
@@ -104,7 +103,7 @@ class CliSession extends SessionInit {
     }
 
     public function end(Response $response) {
-        $this->assign(func_get_args(), function (Response $response) {
+        $this->assignOpen(func_get_args(), function (Response $response) {
             exit();
         }, function (Response $response) {
             parent::end($response);
@@ -140,7 +139,7 @@ class CliSession extends SessionInit {
      *
      * @return mixed
      */
-    public function assign($args , callable $isOpen, callable $noOpen) {
+    public function assignOpen($args , callable $isOpen, callable $noOpen) {
         return call_user_func_array($this->isOpen ? $isOpen : $noOpen, $args);
     }
 

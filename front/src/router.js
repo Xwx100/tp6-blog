@@ -123,7 +123,7 @@ const router = new Router({
 
 // 路由守卫
 router.beforeEach((to, from, next) => {
-  const isLogin = !!localStorage.eleToken
+  const isLogin = !!localStorage.isLogin
 
   if (to.path === '/login' || to.path === '/register') {
     next()

@@ -37,7 +37,7 @@ trait Lists {
      */
     public static function getJsonKeys(array $fieldAttr, string $k): array {
         $jsonKeys = array_filter($fieldAttr, function ($v) use ($k) {
-            if ($v['data_type'] === $k) {
+            if ($v['type'] === $k) {
                 return true;
             }
             return false;

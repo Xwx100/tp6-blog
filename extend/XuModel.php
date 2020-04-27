@@ -4,33 +4,47 @@
 class XuModel extends \think\Model {
 
     public static $xuProp = null;
-    public static $xuInput = null;
+    public $xuInput = null;
     /**
      * @var array join['key' => { 'model_pos'=> '', 'alias' => '', 'on' => ''}]
      */
-    public static $xuJoin = null;
+    public $xuJoin = null;
     /**
      * 用于 放置 处理后的数据 例如 处理后的 xuProp | xuJoin
      * @var array
      */
-    public static $xuResult = null;
+    public $xuAfterHandle = [
+        'xuProp' => [],
+        'xuJoin' => [],
+    ];
 
-    public static function xuLists(array $params) {
+    public function xuLists(array $params) {
         self::xuListsBefore($params);
-        $from = self::alias('a');
-        if (empty(static::$xuJoin) && $params['join']) {
+
+        $fromQuery = $this->alias('a');
+        if (empty($this->xuJoin) && $params['join']) {
             throw new \Exception(sprintf('[ %s.xuJoin ] 未配置', get_called_class()));
         }
+        $fromQuery = $this->xuHandleJoin($fromQuery, $params);
+        $prop = $this->xuAfterHandle['xuProp'];
+        $prop = $this->xuHandleField($prop);
+        $where = $this->xuHandleWhere($params, $prop);
+        $group = $this->xuHandleGroup($params, $prop);
+        $order = $this->xuHandleOrder($params, $prop);
+        $fromQuery = $fromQuery
+            ->where($where)
+            ->group($group)->select();
+
 
         self::xuListsAfter($params, $lists);
 
         return $lists;
     }
 
-    public static function xuListsBefore(array &$params) {
+    public function xuListsBefore(array &$params) {
     }
 
-    public static function xuListsAfter(array $params, array &$lists) {
+    public function xuListsAfter(array $params, array &$lists) {
     }
 
     /**
@@ -40,13 +54,15 @@ class XuModel extends \think\Model {
      * @return \think\db\Query
      * @throws Exception
      */
-    public static function xuHandleJoin(\think\db\Query $q, array $params): \think\db\Query {
-        $joins = array_filter(static::$xuJoin, function ($k) use ($params) {
+    public function xuHandleJoin(\think\db\Query $q, array $params): \think\db\Query {
+        $joins = array_filter($this->xuJoin, function ($k) use ($params) {
             if (in_array($k, $params['join'])) {
                 return true;
             }
             return false;
         }, ARRAY_FILTER_USE_KEY);
+        $props = self::$xuProp;
+
         if (count($joins) > 4) {
             throw new \Exception('[ XuModel.xuHandleJoin ] join 不建议超出 4 个表');
         }
@@ -56,9 +72,14 @@ class XuModel extends \think\Model {
             $modelPos = $join['model_pos'];
             $table = $q->getConnection()->getConfig('prefix')  . '_' . substr(strstr($modelPos, '\\'), 1);
 
-            $q->join($table . ' ' . chr($b), $join['on'], $join['type']);
+            $q->join($table . ' ' . ($join['alias'] ?: chr($b)), $join['on'], $join['type']);
+
+            $props = array_merge($props, $modelPos . '::$xuProp');
             ++$b;
         }
+
+        $this->xuAfterHandle['xuJoin'] = $joins;
+        $this->xuAfterHandle['xuProp'] = $props;
 
         return $q;
     }
@@ -71,7 +92,7 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuAddProp(array $fieldAttr, array $prop) {
+    public function xuAddProp(array $fieldAttr, array $prop) {
         foreach ($fieldAttr as &$row) {
             $row = array_merge($row, $prop);
         }
@@ -86,7 +107,7 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuHandleField(array $fieldAttr) {
+    public function xuHandleField(array $fieldAttr) {
         foreach ($fieldAttr as $k => &$prop) {
             // 用户 自定义
             $alias = '';
@@ -95,11 +116,11 @@ class XuModel extends \think\Model {
             }
             // 优先读取 格式化字段
             if ($prop['field_format']) {
-                $prop['after_field'] = sprintf("{$prop['field_format']} as {$k}", $alias . self::xuBeforeField($prop));
+                $prop['after_field'] = sprintf("{$prop['field_format']} as {$k}", $alias . $this->xuBeforeField($prop));
                 continue;
             }
             // front_field !== before_field 则触发重命名 as
-            if (self::xuBeforeField($prop) && self::xuBeforeField($prop) !== $k) {
+            if ($this->xuBeforeField($prop) && $this->xuBeforeField($prop) !== $k) {
                 $prop['after_field'] = sprintf('%s%s as %s', $alias, $prop['before_field'], $k);
                 continue;
             }
@@ -117,7 +138,7 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuHandleWhere(array $params, array $fieldAttr): array {
+    public function xuHandleWhere(array $params, array $fieldAttr): array {
         if (empty($params)) {
             return $fieldAttr;
         }
@@ -132,8 +153,8 @@ class XuModel extends \think\Model {
             }
             // 获取 字段 属性
             $prop = &$fieldAttr[$k];
-            $afterField = self::xuAliasBeforeField($fieldAttr, $k);
-            self::xuHandleProp($frontValue, $afterField, $prop);
+            $afterField = $this->xuAliasBeforeField($fieldAttr, $k);
+            $this->xuHandleProp($frontValue, $afterField, $prop);
         }, ARRAY_FILTER_USE_BOTH);
 
         return $fieldAttr;
@@ -146,7 +167,7 @@ class XuModel extends \think\Model {
      * @param        $afterField
      * @param array  $prop
      */
-    public static function xuHandleProp($frontValue, $afterField, array &$prop) {
+    public function xuHandleProp($frontValue, $afterField, array &$prop) {
         if (is_array($frontValue)) {
             if ($prop['multi']) {
                 $frontValue = array_unique($frontValue);
@@ -196,7 +217,7 @@ class XuModel extends \think\Model {
      *
      * @return string
      */
-    public static function xuHandleGroup(array $params, array $fieldAttr): string {
+    public function xuHandleGroup(array $params, array $fieldAttr): string {
         return implode(',', $params['group_by']);
     }
 
@@ -208,7 +229,7 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuHandleOrder(array $params, array $fieldAttr): array {
+    public function xuHandleOrder(array $params, array $fieldAttr): array {
         $order = [];
         foreach ((array)$params['order_by'] as $item) {
             $p = $fieldAttr[$item['sort_field']];
@@ -227,12 +248,12 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuAfterFields(array $params, array $fieldAttr): array {
+    public function xuAfterFields(array $params, array $fieldAttr): array {
         $all = $fieldAttr;
         if (isset($params['field'])) {
             $all = array_intersect_key($all, array_combine($params['field'], $params['field']));
         }
-        return self::xuGetColumn($all, 'after_field');
+        return $this->xuGetColumn($all, 'after_field');
     }
 
     /**
@@ -242,8 +263,8 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuAfterWheres(array $fieldAttr) {
-        return self::xuGetColumn($fieldAttr, 'after_where');
+    public function xuAfterWheres(array $fieldAttr) {
+        return $this->xuGetColumn($fieldAttr, 'after_where');
     }
 
 
@@ -254,8 +275,8 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function xuWhereKeyFormat(array $fieldAttr): array {
-        return self::xuGetColumn($fieldAttr, 'where_key_format');
+    public function xuWhereKeyFormat(array $fieldAttr): array {
+        return $this->xuGetColumn($fieldAttr, 'where_key_format');
     }
 
     /**
@@ -265,11 +286,11 @@ class XuModel extends \think\Model {
      *
      * @return array
      */
-    public static function getTimedNullKeys(array $fieldAttr): array {
-        return self::xuGetColumn($fieldAttr, 'timed_null');
+    public function getTimedNullKeys(array $fieldAttr): array {
+        return $this->xuGetColumn($fieldAttr, 'timed_null');
     }
 
-    public static function xuGetColumn(array $fieldAttr, $name) {
+    public function xuGetColumn(array $fieldAttr, $name) {
         return array_column($fieldAttr, $name);
     }
 
@@ -281,9 +302,9 @@ class XuModel extends \think\Model {
      *
      * @return mixed|string
      */
-    public static function xuAliasBeforeField(array $fieldAttr, string $key) {
+    public function xuAliasBeforeField(array $fieldAttr, string $key) {
         $prop = $fieldAttr[$key];
-        $field = self::xuBeforeField($prop);
+        $field = $this->xuBeforeField($prop);
         if ($prop['alias']) {
             $field = "{$prop['alias']}.{$field}";
         }
@@ -296,12 +317,12 @@ class XuModel extends \think\Model {
      *
      * @return string
      */
-    public static function xuBeforeField(array $prop): string {
+    public function xuBeforeField(array $prop): string {
         return $prop['before_field'];
     }
 
 
-    public static function test() {
+    public function test() {
         // 属性
         self::$xuProp = [
             'user_id' => [
@@ -317,7 +338,7 @@ class XuModel extends \think\Model {
             ],
         ];
         // 前端参数
-        self::$xuInput = [
+        $this->xuInput = [
             'field'     => 'array 字段',
             'from'      => 'string 来自于哪个表',
             'join'      => 'array ',
